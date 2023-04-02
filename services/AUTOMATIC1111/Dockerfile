@@ -1,5 +1,12 @@
 # syntax=docker/dockerfile:1
 
+FROM bash:alpine3.15 as data-download
+
+RUN apk add parallel aria2
+COPY ./download /docker
+RUN chmod +x /docker/download.sh
+RUN bash /docker/download.sh
+
 FROM alpine/git:2.36.2 as download
 
 SHELL ["/bin/sh", "-ceuxo", "pipefail"]
@@ -82,6 +89,7 @@ EOF
 RUN --mount=type=cache,target=/root/.cache/pip  pip install -U opencv-python-headless
 
 COPY . /docker
+COPY --from=data-download /data/ /data
 
 RUN <<EOF
 python3 /docker/info.py ${ROOT}/modules/ui.py
