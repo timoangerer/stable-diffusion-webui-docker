@@ -35,7 +35,13 @@ FROM alpine:3.17 as xformers
 RUN apk add --no-cache aria2
 RUN aria2c -x 5 --dir / --out wheel.whl 'https://github.com/AbdBarho/stable-diffusion-webui-docker/releases/download/5.0.0/xformers-0.0.17.dev449-cp310-cp310-manylinux2014_x86_64.whl'
 
-FROM python:3.10.9-slim
+FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04
+
+RUN <<EOF
+apt update && apt-get install software-properties-common -y
+add-apt-repository 'ppa:deadsnakes/ppa'
+apt install python3.10 python3-pip -y
+EOF
 
 SHELL ["/bin/bash", "-ceuxo", "pipefail"]
 
@@ -91,15 +97,15 @@ RUN --mount=type=cache,target=/root/.cache/pip  pip install -U opencv-python-hea
 COPY . /docker
 COPY --from=data-download /data/ /data
 
-RUN <<EOF
-python3 /docker/info.py ${ROOT}/modules/ui.py
-mv ${ROOT}/style.css ${ROOT}/user.css
-# one of the ugliest hacks I ever wrote
-sed -i 's/in_app_dir = .*/in_app_dir = True/g' /usr/local/lib/python3.10/site-packages/gradio/routes.py
-EOF
+# RUN <<EOF
+# python3 /docker/info.py ${ROOT}/modules/ui.py
+# mv ${ROOT}/style.css ${ROOT}/user.css
+# # one of the ugliest hacks I ever wrote
+# sed -i 's/in_app_dir = .*/in_app_dir = True/g' /usr/local/lib/python3.10/site-packages/gradio/routes.py
+# EOF
 
 WORKDIR ${ROOT}
 ENV CLI_ARGS=""
 EXPOSE 7860
 ENTRYPOINT ["/docker/entrypoint.sh"]
-CMD python -u webui.py --listen --port 7860 ${CLI_ARGS}
+CMD python3 -u webui.py --listen --port 7860 ${CLI_ARGS}
